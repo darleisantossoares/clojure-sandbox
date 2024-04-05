@@ -39,4 +39,8 @@
 
 
 
+(defn qqcoisa
+  []
+  (println "Ola"))
+
 
