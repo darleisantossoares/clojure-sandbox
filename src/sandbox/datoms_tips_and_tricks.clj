@@ -10,9 +10,10 @@
   [uri]
   (d/create-database uri))
 
-;(create-database db-uri)
+(create-database db-uri)
 
 (def conn (d/connect db-uri))
+
 
 (def orders-schema-customer
   [{:db/ident :customer/id
@@ -29,7 +30,7 @@
     :db/valueType :db.type/uuid
     :db/unique :db.unique/identity
     :db/cardinality :db.cardinality/one}
-   {:db/ident :order/customer-id ; we will have customer-id to facilitate some understanding of Datom's API
+   {:db/ident :order/customer-id
     :db/valueType :db.type/uuid
     :db/index true
     :db/cardinality :db.cardinality/one}
@@ -55,6 +56,9 @@
     :db/valueType :db.type/uuid
     :db/unique :db.unique/identity
     :db/cardinality :db.cardinality/one}
+   {:db/ident :product/name
+    :db/valueType :db.type/string
+    :db/cardinality :db.cardinality/one}
    {:db/ident :product/price
     :db/valueType :db.type/float
     :db/cardinality :db.cardinality/one}])
@@ -79,10 +83,19 @@
   @(d/transact conn [{:customer/id (d/squuid)
                       :customer/email (generate-random-email)}]))
 
-; insert 1000 different products
-(doseq [_ (range 1000)]
+
+(def db (d/db conn))
+
+(d/q '[:find (count ?e) :where [?e :customer/id]] db)
+
+
+(d/q '[:find (count ?e) :where [?e :product/id]] db)
+
+;insert 10 different products
+(doseq [x (range 1000)]
   @(d/transact conn [{:product/id (d/squuid)
-                      :product/price (+ 0.1 (* (rand) 99.9))}]))
+                        :product/name (str "product " x)
+                        :product/price (+ 0.1 (* (rand) 99.9))}]))
 
 (defn fetch-random-customer [db]
   (let [result (d/q '[:find (rand ?e) .
@@ -121,9 +134,9 @@
 
 @(d/transact conn [(generate-order db (fetch-random-customer db) (fetch-random-product db))])
 
-(create-n-orders conn 500)
+(create-n-orders conn 500000)
 
-(d/q '[:find ?e :where [?e :order/id]] db)
+(d/q '[:find (count ?e) :where [?e :order/id]] db)
 
 (d/q '[:find ?customer-id :where [?e :order/customer-id ?customer-id]] db)
 
