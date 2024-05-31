@@ -145,6 +145,8 @@
 
 (def random-customer-id (rand-nth (map first (d/q '[:find ?customer-id :where [?e :order/customer-id ?customer-id]] db))))
 
+(println random-customer-id)
+
 (d/datoms db :avet (d/entid db :order/customer-id)  random-customer-id)
 
 (pprint "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
@@ -388,6 +390,71 @@
 (count customer-orders)
 
 (doseq [order customer-orders]
-  (println (:order/customer-id order)))
+  (println (:order/id order)))
+
+(print customer-orders)
+
+
+
+
+;;;;; tips and tricks on how to update data.
+
+
+
+
+(print "random customer ->" random-customer-id)
+
+
+(def random-order-id #uuid "665548d8-ea94-4686-a66f-316de390c916")
+
+(print random-order-id)
+
+
+(def random-order (d/q '[:find  ?e . :where [?e :order/id #uuid "665548d8-ea94-4686-a66f-316de390c916"]] db))
+
+(print random-order)
+
+
+(def order-entity (d/entity db random-order))
+
+
+(:order/id order-entity)
+
+
+(def after-transact (let [tx-data [{:order/id (:order/id order-entity)
+                 :order/status :order.status/closed}]
+       result (d/transact conn tx-data)]
+
+   (println result)
+                      
+                      {:tx-result result
+                       :io-stats  (get-in result [:db-before :datomic.ion.stats/io-stats])}))
+
+
+(println after-transact)
+
+(let
+ [order-id (:order/id order-entity)]
+  @(d/transact
+    conn
+    {:tx-data [{:order/id order-id :order/status :order.status/darlei}]}))
+
+
+(println (d/q '[:find  (pull ?e[*])  :where [?e :order/id #uuid "665548d8-ea94-4686-a66f-316de390c916"]] (d/db conn)))
+
+(println (:order/id order-entity))
+
+
+(let [order-id #uuid "665548d8-ea94-4686-a66f-316de390c916"
+      tx-result (d/transact conn [{:order/id order-id :order/status :order.status/d}] :io-context :tx/example)]
+  (println tx-result))
+
+
+
+
+
+
+
+
 
 
