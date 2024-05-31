@@ -91,11 +91,14 @@
 
 (d/q '[:find (count ?e) :where [?e :product/id]] db)
 
+(d/q '[:find (count ?x) :where [?x :order/id]] db)
+
+
 ;insert 10 different products
 (doseq [x (range 1000)]
   @(d/transact conn [{:product/id (d/squuid)
-                        :product/name (str "product " x)
-                        :product/price (+ 0.1 (* (rand) 99.9))}]))
+                      :product/name (str "product " x)
+                      :product/price (+ 0.1 (* (rand) 99.9))}]))
 
 (defn fetch-random-customer [db]
   (let [result (d/q '[:find (rand ?e) .
@@ -126,7 +129,7 @@
             order (generate-order db  customer-eid product-eid)]
         @(d/transact conn [order])))))
 
-(def db (d/db conn))
+;(def db (d/db conn))
 
 (pprint (:customer/id (d/entity db (fetch-random-customer db))))
 
@@ -161,13 +164,17 @@
   (pprint (:tx datom))
   (pprint (:added datom)))
 
+
 (pprint (d/query {:args [db random-customer-id]
                   :query-stats true
                   :query '{:find [(count ?orders)]
                            :in [$ ?random-customer-id]
                            :where [[?orders :order/customer-id ?random-customer-id]]}}))
 
+
+
 (println random-customer-id)
+
 (println "####################################")
 
 (pprint (d/query {:args [db random-customer-id]
@@ -275,11 +282,112 @@
 
 
 
+;;;;;;;;;;;;;
+
+
+
+(def customer (d/q '[:find (pull ?e [:order/customer]) :where [?e :order/id #uuid "66554eac-a8d2-4c0d-90ee-1542c27199ff"]] db))
+
+(def order-id  #uuid "66554eac-a8d2-4c0d-90ee-1542c27199ff")
+
+
+(println (:order/customer customer))
+
+(datoms-query db {:api :datoms
+                  :opts {:index :avet
+                         :attr :order/customer
+                         :values [customer]}})
 
 
 
 
+(let [db (d/db conn)
+      eid (ffirst (d/index-range db :order/id order-id order-id))]
+  (pprint eid)
+  (pprint (d/pull db '[*] eid)))
+
+(println customer)
 
 
+(d/entid db customer)
+
+
+
+
+(pprint (d/q '[:find (pull ?e [{:order/customer [*]}]) :where [?e :order/id #uuid "66554eac-a8d2-4c0d-90ee-1542c27199ff"]] db))
+
+
+
+#_(def customer-id (d/q '[:find ?customer-id :where [?e :customer/id #uuid "6655441d-3530-46f5-a15d-e7834405d146"]
+                        [?customer-id :customer/id ?e]] db))
+
+(def customer-id #uuid "6655441d-3530-46f5-a15d-e7834405d146")
+
+
+
+(d/index-pull db {:index :avet :selector '[*] :start customer-id})
+
+
+
+
+(defn index-pull-order-by-id [order-id]
+  (let [db (d/db conn)
+        eids (map first (d/index-range db :order/id order-id order-id))]
+    (print eids)
+    (mapv #(d/pull db '[*] %) eids)))
+
+
+(d/index-range db :order/id order-id order-id)
+
+(d/q '[:find ?e :where [?e :order/customer-id customer-id]] db)
+
+
+(map (fn [eid] (d/pull db '[*] eid)) (d/index-range db :order/customer-id customer-id customer-id))
+
+(pprint (index-pull-order-by-id order-id))
+
+(pprint order-id)
+
+(index-pull-order-by-id order-id)
+
+(d/entity-db (d/entity db 17592186045618))
+
+
+
+(datoms-query db {:api :datoms
+                  :opts {:index :avet
+                         :attr :order/customer-id
+                         :values [customer-id]}})
+
+
+(d/part 17592186045618)
+
+
+(defn get-customer-orders [db customer-id]
+  (d/index-pull db
+                {:index :avet
+                 :start [:order/customer-id customer-id]
+                 :reverse false
+                 :limit nil
+                 :selector [:order/id :order/placed-at :order/status :order/product :order/customer-id]}))
+
+
+(pprint random-customer-id)
+
+(get-customer-orders db random-customer-id)
+
+
+(doseq [order (get-customer-orders db random-customer-id)]
+  (println order))
+
+
+(def customer-orders (vec (take-while
+       (fn [order] (= (:order/customer-id order) random-customer-id))
+       (get-customer-orders db random-customer-id))))
+
+(count customer-orders)
+
+(doseq [order customer-orders]
+  (println (:order/customer-id order)))
 
 
