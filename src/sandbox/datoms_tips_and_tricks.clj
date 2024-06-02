@@ -3,6 +3,11 @@
             [clojure.pprint :as pp :refer [pprint]]
             [clojure.string :as str]))
 
+(:require '[[datomic.api :as d]
+            [clojure.pprint :as pp :refer [pprint]]
+            [clojure.string :as str]])
+
+
 (def db-uri "datomic:dev://localhost:4334/tips-and-tricks")
 
 (defn create-database
@@ -71,7 +76,9 @@
 (transact-schema conn orders-schema-order)
 (transact-schema conn orders-schema-product)
 
-(defn generate-random-email []
+(defn generate-random-email
+  "generates random emails"
+  []
   (let [chars "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         suffix "@tips-and-tricks.com"
         email-length (+ 5 (rand-int 14))
@@ -410,9 +417,20 @@
 (print random-order-id)
 
 
+(defn get-order-data
+  [par-order-id db]
+  (d/q '[:find (pull ?e [*])
+         :where [?e :order/id  #uuid "665548d8-ea94-4686-a66f-316de390c916"]] db))
+
+(let [order (d/q '[:find (pull ?e [*]) . :where [?e :order/id  #uuid "665548d8-ea94-4686-a66f-316de390c916"]] db)
+      new-order (assoc order :order/status :order.status/delivered)
+      tx-result @(d/transact conn [new-order] :io-context :tips-and-tricks/dedup)]
+  (println tx-result))
+
+
 (def random-order (d/q '[:find  ?e . :where [?e :order/id #uuid "665548d8-ea94-4686-a66f-316de390c916"]] db))
 
-(print random-order)
+(println random-order)
 
 
 (def order-entity (d/entity db random-order))
@@ -421,17 +439,8 @@
 (:order/id order-entity)
 
 
-(def after-transact (let [tx-data [{:order/id (:order/id order-entity)
-                 :order/status :order.status/closed}]
-       result (d/transact conn tx-data)]
-
-   (println result)
-                      
-                      {:tx-result result
-                       :io-stats  (get-in result [:db-before :datomic.ion.stats/io-stats])}))
 
 
-(println after-transact)
 
 (let
  [order-id (:order/id order-entity)]

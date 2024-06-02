@@ -1,4 +1,5 @@
-(ns book.30days.chap01)
+(ns book.30days.chap01
+  (:require [clojure.string :as str]))
 
 
 (def counter (atom 0))
@@ -78,5 +79,45 @@
 (def updated-names (conj names "David"))
 
 updated-names
+
+
+(def uppercase-names (map #(str/upper-case %) names))
+
+(println uppercase-names)
+
+#_(defn apply-twice
+  [f x]
+  (f (f x)))
+
+(defn increment [x]
+  (+ x 1))
+
+
+(apply-twice increment 5)
+
+
+;;;;; recursion
+
+
+(defn factorial
+  [n]
+  (if (<= n 1)
+    1
+    (* n (factorial(- n 1)))))
+
+(factorial 10)
+
+
+(defn factorial-loop
+  [n]
+  (loop [result 1
+         i n]
+    (if (<= i 1)
+      result
+      (recur (* result i) (- i 1)))))
+
+(factorial-loop 10)
+
+(= (factorial 10) (factorial-loop 10))
 
 
