@@ -97,7 +97,10 @@
    :order/product-id (:product/id (d/entity db product-eid))
    :order/product product-eid})
 
-; insert 100 customers
+
+
+(pprint (d/db-stats (d/db conn)))
+                                        ; insert 100 customers
 (doseq [_ (range 100)]
   @(d/transact conn [{:customer/id (d/squuid)
                       :customer/email (generate-random-email)}]))
@@ -160,4 +163,75 @@
 
 
 
+; =========== d/schema ===========
+
+(defn get-schema []
+  (let [conn (d/connect db-uri)
+        db (d/db conn)
+        schema-entities (d/q '[:find ?e
+                               :where
+                               [?e :db/ident ?ident]
+                               [?e :db/valueType]
+                               (not [(clojure.string/starts-with? (str ?ident) ":db")])
+                               (not [(clojure.string/starts-with? (str ?ident) ":fressian")])]
+                             db)]
+    (map (fn [eid]
+           (d/pull db '[*] eid))
+         (map first schema-entities))))
+
+(defn id->keyword [db id]
+  (when id
+    (let [ident (:db/ident (d/entity db id))]
+      (if ident
+        ident
+        (do
+          (println "Warning: No :db/ident found for id" id)
+          nil)))))
+
+(defn format-schema [db schema]
+  (map (fn [entity]
+         (let [valueType-id (:db/valueType entity)
+               cardinality-id (:db/cardinality entity)
+               unique-id (:db/unique entity)
+               tupleAttrs-ids (:db/tupleAttrs entity)]
+           {:db/ident (:db/ident entity)
+            :db/valueType (:db/ident (d/entity db (:db/id valueType-id)))
+            :db/cardinality (:db/ident (d/entity db (:db/id cardinality-id)))
+            :db/unique (when unique-id
+                         (:db/ident (d/entity db (:db/id unique-id))))
+            :db/tupleAttrs (when tupleAttrs-ids
+                             tupleAttrs-ids)})) schema))
+
+(defn retrieve-schema []
+  (let [conn (d/connect db-uri)
+        db (d/db conn)
+        schema (get-schema)
+        formatted-schema (format-schema db schema)]
+    (doseq [entity formatted-schema]
+      (pprint entity))
+    formatted-schema))
+
+(println (apply str (repeat 20 "==")))
+
+(retrieve-schema)
+
+
+(def customer #:db{:id 76,
+                   :ident :order/customer,
+                   :valueType #:db{:id 20},
+                   :cardinality #:db{:id 35}})
+
+
+(:db/ident (d/entity (d/db conn) (get-in customer [:db/valueType :db/id])))
+(:db/ident (d/entity (d/db conn) (get-in customer [:db/cardinality :db/id])))
+
+(id->keyword (d/db conn)(:db/valueType customer))
+
+
+
+
+@(d/transact conn [{:db/ident :product/id+name
+    :db/valueType :db.type/tuple
+    :db/cardinality :db.cardinality/one
+    :db/tupleAttrs [:product/id :product/name]}])
 
