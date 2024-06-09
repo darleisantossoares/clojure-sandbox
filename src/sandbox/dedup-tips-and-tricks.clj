@@ -193,10 +193,12 @@
          (let [valueType-id (:db/valueType entity)
                cardinality-id (:db/cardinality entity)
                unique-id (:db/unique entity)
-               tupleAttrs-ids (:db/tupleAttrs entity)]
+               tupleAttrs-ids (:db/tupleAttrs entity)
+               indexed? (:db/index entity)]
            {:db/ident (:db/ident entity)
             :db/valueType (:db/ident (d/entity db (:db/id valueType-id)))
             :db/cardinality (:db/ident (d/entity db (:db/id cardinality-id)))
+            :db/index (if (some? indexed?) indexed? false)
             :db/unique (when unique-id
                          (:db/ident (d/entity db (:db/id unique-id))))
             :db/tupleAttrs (when tupleAttrs-ids
