@@ -121,3 +121,58 @@ updated-names
 (= (factorial 10) (factorial-loop 10))
 
 
+;;;; pattern matching
+
+
+(defn match-day [day]
+  (case day
+    1 "Monday"
+    2 "Tuesday"
+    3 "Wednesday"
+    4 "Thursday"
+    5 "Friday"
+    "Weekend"))
+
+(match-day 1)
+
+(defn is-positive? [num]
+  (cond
+    (< num 0) false
+    (= num 0) false
+    (> num 0) true))
+
+(is-positive? 80)
+
+(def my-new-list '(1 2 3 4 5))
+
+(println my-new-list)
+
+(def my-new-map {:name "Alice" :age 30 :city "New York"})
+
+(def my-set #{1 2 3 4 5})
+
+(println my-set)
+
+(println (conj my-set 23))
+
+(defn create-person
+  [age name]
+  {:age age :name name})
+
+(def person1 (create-person 20 "Alice"))
+(def person2 (create-person 16 "Akemi"))
+(def person3 (create-person 23 "Roberta"))
+
+(def adults (filter #(>= (:age %) 18) [person1 person2 person3]))
+
+(println adults)
+
+
+(def squared (map #(* % %) my-new-list))
+
+(println squared)
+
+(def total (reduce + my-new-list))
+(println total)
+
+(take 20 (range))
